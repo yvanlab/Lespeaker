@@ -31,6 +31,11 @@ void setData(){
 	  settingMger->gain = atoi(str.c_str());
 	  settingMger->writeData();
   }
+  str = wifiMger->getServer()->arg("input");
+    if (str.length()>0) {
+  	  strcpy(settingMger->input, str.c_str());
+  	  settingMger->writeData();
+    }
 
   dataPage();
 }
@@ -56,6 +61,7 @@ DEBUGLOG("dataPage");
   //message += "<p>Empreinte: " + String (fpManager.getTemplateCount()) + "/" + String (fpManager.getCapacityCount()) + "</p>";
   message += "<form method='get' action='setData'>";
   message += "<label>Volume:</label><input name='vol' length=64 value=\""+String(settingMger->gain) +"\"><br>";
+  message += "<label>Input:</label><input name='input' length=64 value=\""+String(settingMger->input) +"\"><br>";
   message += "<input type='checkbox' name='new' value='true'>Ajouter nouvelle empreinte<br>";
   message += "<input type='checkbox' name='clean' value='true'>Effacer toutes les empreintes<br>";
   /*message += "<TABLE border=2 cellpadding=10 log>";

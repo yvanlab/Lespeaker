@@ -28,6 +28,7 @@ class SettingManager : public BaseSettingManager
     String getClassName(){return "SettingManager";}
     String toString(boolean bJson);
     int8_t gain;
+    char   input[4];
 
 };
 

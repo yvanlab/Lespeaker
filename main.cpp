@@ -230,7 +230,8 @@ void loop(void) {
 		case ActionManager::SELECTION_CHAIN:
 			if (!mp3->isRunning()) {
 				DEBUGLOGF("SELECTION_CHAIN\n");
-				startNewSound(fileMger->getNextFile(), SOUND_INPUT_TYPE_SD);
+				//startNewSound(fileMger->getNextFile(), SOUND_INPUT_TYPE_SD);
+				startNewSound("http://mp3lg3.tdf-cdn.com/9146/lag_103325.mp3", SOUND_INPUT_TYPE_URL);
 			}
 			break;
 
