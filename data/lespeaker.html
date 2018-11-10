@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta content="text/html; charset=windows-1252" http-equiv="content-type" />
+	<title>lespeaker</title>
+	<script type="application/x-javascript"></script>
+</head>
+<body>
+<h1 style="text-align: center;"><span id="modulename"><span style="color: rgb(255, 0, 0);">dd<img alt="smiley" height="20" src="http://localhost:19455/ckeditor/plugins/smiley/images/regular_smile.gif" title="smiley" width="20" /></span></span><span><span style="color: rgb(255, 0, 0);">dd </span>Module</span> configuration</h1>
+
+<div style="text-align: center;">
+<p>Version : <span id="version">3.0</span></p>
+</div>
+
+<div style="text-align: center;">
+<p>Date build : <span id="builddate">10/08/1900</span></p>
+</div>
+
+<div style="text-align: center;">
+<p>Up time : <span id="uptime">un moment</span></p>
+</div>
+
+<p>~jtag-interface~jtag-interface&nbsp;</p>
+
+<hr style="width: 177px; margin-top: 51px; margin-right: auto; margin-left: auto;" />
+<form action="/action_page.php" style="width: 525px; height: 42px;">
+<div>
+<div>
+<h3 style="height: 3px;">Titre</h3>
+
+<hr />
+<p><i><b><span id="titre">Le titreeee</span></b></i></p>
+
+<div>
+<h3 style="height: 4px;">Source</h3>
+
+<hr /><input id="msd_id" onclick="changeSetting('source','1')" type="radio" /> MicroSD<br />
+<input id="rad_id" onclick="changeSetting('source','2')" type="radio" /> Radio</div>
+
+<div>
+<h3 style="height: 3px;">Periode</h3>
+
+<hr /><input id="soir_id" onclick="changeSetting('period','soir')" type="radio" /> Soir<br />
+<input id="matin_id" onclick="changeSetting('period','matin')" type="radio" /> Matin</div>
+
+<div>
+<h3 style="height: 3px;">Action</h3>
+
+<hr /><input id="act_vol_id" type="radio" /> Volume<br />
+<input id="act_sel_id" type="radio" /> Selection</div>
+
+<div>
+<h3 style="height: 5px;">Actions</h3>
+
+<hr /><input onclick="changeSetting('action','start')" type="button" value="Stop" /> <input onclick="changeSetting('action','stop')" type="button" value="Start" /> <input onclick="changeSetting('action','next')" type="button" value="Suivante" /> <input onclick="changeSetting('action','prev')" type="button" value="Precedent" /><br />
+Volume <input id="volume" max="30" min="0" name="volume" onchange="changeSetting('volume',this.value)" type="range" /></div>
+</div>
+<script>
+                function source(src) {
+                    document.getElementById("version").innerHTML = src;
+                    var xhttp = new XMLHttpRequest();
+                    xhttp.open("GET", "setData?source=" + src, true);
+                    xhttp.send();
+                }
+
+                function MyAction(act, ) {
+                    document.getElementById("version").innerHTML = act;
+                    var xhttp = new XMLHttpRequest();
+                    xhttp.open("GET", "setData?action=" + act, true);
+                    xhttp.send("action=" + act);
+                }
+
+                function changeVolume(newVal) {
+                    document.getElementById("version").innerHTML = newVal;
+                    var xhttp = new XMLHttpRequest();
+                    xhttp.open("GET", "setData?volume=" + newVal, true);
+                    xhttp.send();
+                };
+
+                function changeSetting(act, val) {
+                    document.getElementById("version").innerHTML = newVal;
+                    var xhttp = new XMLHttpRequest();
+                    xhttp.onreadystatechange = function() {
+                        if (this.readyState == 4 && this.status == 200) {
+                            update(this.responseText)
+                        }
+                    };
+                    xhttp.open("GET", "setData?" + act + "=" + val, true);
+                    xhttp.send();
+                };
+
+                function update(responseText) {
+                    var myObj = JSON.parse(this.responseText);
+                    document.getElementById("builddate").innerHTML =
+                        myObj.module.build_date;
+                    document.getElementById("version").innerHTML =
+                        myObj.module.version;
+                    document.getElementById("modulename").innerHTML =
+                        myObj.module.nom;
+                    document.getElementById("uptime").innerHTML =
+                        myObj.module.uptime;
+
+                    document.getElementById("titre").innerHTML =
+                        myObj.sound;
+
+                    document.getElementById("volume").value = myObj.setting.volume;
+
+                    if (myObj.setting.source == 1)
+                        document.getElementById("msd_id").checked = "checked";
+                    else
+                        document.getElementById("rad_id").checked = "checked";
+
+                    if (myObj.setting.period == 1)
+                        document.getElementById("matin_id").checked = "checked";
+                    else
+                        document.getElementById("soir_id").checked = "checked";
+
+                }
+
+                function init() {
+                    var xhttp = new XMLHttpRequest();
+                    xhttp.onreadystatechange = function() {
+                        if (this.readyState == 4 && this.status == 200) {
+                            update(this.responseText)
+                        }
+                    };
+                    xhttp.open("GET", "status", true);
+                    xhttp.send();
+                }
+                window.onload = init;
+            </script></div>
+</form>
+</body>
+</html>

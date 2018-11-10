@@ -391,7 +391,7 @@ environment/project/io.sloeber.core.toolChain.release.1771491929/A.UPLOAD.PROTOC
 environment/project/io.sloeber.core.toolChain.release.1771491929/A.UPLOAD.PROTOCOL/value=stk500v1
 environment/project/io.sloeber.core.toolChain.release.1771491929/A.UPLOAD.SPEED/delimiter=;
 environment/project/io.sloeber.core.toolChain.release.1771491929/A.UPLOAD.SPEED/operation=replace
-environment/project/io.sloeber.core.toolChain.release.1771491929/A.UPLOAD.SPEED/value=230400
+environment/project/io.sloeber.core.toolChain.release.1771491929/A.UPLOAD.SPEED/value=921600
 environment/project/io.sloeber.core.toolChain.release.1771491929/A.UPLOAD.TOOL/delimiter=;
 environment/project/io.sloeber.core.toolChain.release.1771491929/A.UPLOAD.TOOL/operation=replace
 environment/project/io.sloeber.core.toolChain.release.1771491929/A.UPLOAD.TOOL/value=esptool
@@ -404,9 +404,6 @@ environment/project/io.sloeber.core.toolChain.release.1771491929/A.UPLOAD.WAIT_F
 environment/project/io.sloeber.core.toolChain.release.1771491929/A.VERSION/delimiter=;
 environment/project/io.sloeber.core.toolChain.release.1771491929/A.VERSION/operation=replace
 environment/project/io.sloeber.core.toolChain.release.1771491929/A.VERSION/value=0.0.1
-environment/project/io.sloeber.core.toolChain.release.1771491929/A.WINDOWS.UPLOAD.SPEED/delimiter=;
-environment/project/io.sloeber.core.toolChain.release.1771491929/A.WINDOWS.UPLOAD.SPEED/operation=replace
-environment/project/io.sloeber.core.toolChain.release.1771491929/A.WINDOWS.UPLOAD.SPEED/value=256000
 environment/project/io.sloeber.core.toolChain.release.1771491929/JANTJE.ARCHITECTURE_ID/delimiter=;
 environment/project/io.sloeber.core.toolChain.release.1771491929/JANTJE.ARCHITECTURE_ID/operation=replace
 environment/project/io.sloeber.core.toolChain.release.1771491929/JANTJE.ARCHITECTURE_ID/value=arduino-esp32
@@ -451,7 +448,7 @@ environment/project/io.sloeber.core.toolChain.release.1771491929/JANTJE.MAKE_LOC
 environment/project/io.sloeber.core.toolChain.release.1771491929/JANTJE.MAKE_LOCATION/value=C\:\\sloeber\\arduinoPlugin\\tools\\make\\
 environment/project/io.sloeber.core.toolChain.release.1771491929/JANTJE.MENU/delimiter=;
 environment/project/io.sloeber.core.toolChain.release.1771491929/JANTJE.MENU/operation=replace
-environment/project/io.sloeber.core.toolChain.release.1771491929/JANTJE.MENU/value=CpuFrequency\=160\nDebug\=Serial\nDebugLevel\=none\nFlashErase\=none\nFlashFreq\=80\nFlashSize\=4M1M\nLwIPVariant\=v2mss536\nPartitionScheme\=default\nUploadSpeed\=230400\nVTable\=iram
+environment/project/io.sloeber.core.toolChain.release.1771491929/JANTJE.MENU/value=CpuFrequency\=160\nDebug\=Serial\nDebugLevel\=none\nFlashErase\=none\nFlashFreq\=80\nFlashSize\=4M1M\nLwIPVariant\=v2mss536\nPartitionScheme\=default\nUploadSpeed\=921600\nVTable\=iram
 environment/project/io.sloeber.core.toolChain.release.1771491929/JANTJE.OBJCOPY/delimiter=;
 environment/project/io.sloeber.core.toolChain.release.1771491929/JANTJE.OBJCOPY/operation=replace
 environment/project/io.sloeber.core.toolChain.release.1771491929/JANTJE.OBJCOPY/value=${A.RECIPE.OBJCOPY.EEP.PATTERN}\n\t${A.RECIPE.OBJCOPY.HEX.PATTERN}

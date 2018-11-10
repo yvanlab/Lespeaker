@@ -32,7 +32,7 @@ class AudioOutput
     virtual bool SetRate(int hz) { hertz = hz; return true; }
     virtual bool SetBitsPerSample(int bits) { bps = bits; return true; }
     virtual bool SetChannels(int chan) { channels = chan; return true; }
-    virtual bool SetGain(float f) { if (f>4.0) f = 4.0; if (f<0.0) f=0.0; gainF2P6 = (uint8_t)(f*(1<<6)); return true; }
+    virtual bool SetGain(float f) { if (f>4.0) f = 4.0; if (f<0.0) f=0.0; gainF2P6 = (uint8_t)(f*(1<<6));Serial.printf("gin [%d]\n",gainF2P6); return true; }
     virtual bool begin() { return false; };
     typedef enum { LEFTCHANNEL=0, RIGHTCHANNEL=1 } SampleIndex;
     virtual bool ConsumeSample(int16_t sample[2]) { (void)sample; return false; }
@@ -64,7 +64,7 @@ class AudioOutput
     };
 
     inline int16_t Amplify(int16_t s) {
-      int32_t v = (s * gainF2P6)>>6;
+      int32_t v = ((int32_t )(s * gainF2P6*0.05))>>6;
       if (v < -32767) return -32767;
       else if (v > 32767) return 32767;
       else return (int16_t)(v&0xffff);

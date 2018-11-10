@@ -22,13 +22,15 @@ class SettingManager : public BaseSettingManager
   public:
 
     SettingManager(unsigned char pinLed);
-    unsigned char readData();
-    unsigned char writeData();
+    virtual  unsigned char readData();
+    virtual  unsigned char writeData();
 
     String getClassName(){return "SettingManager";}
     String toString(boolean bJson);
-    int8_t gain;
-    char   input[4];
+    uint8_t volume;
+    uint8_t source;
+    uint8_t mode;
+
 
 };
 

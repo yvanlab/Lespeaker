@@ -1,9 +1,8 @@
 matin
  ane:/matin/ane
- url:http://streaming.shoutcast.com/80sPlanet?lang=en-US
+ url:/matin/url
  msi:/matin/msi
 soir
  ane:/soir/ane
- url:http://mp3lg3.tdf-cdn.com/9146/lag_103325.mp3
- url:http://vr-wr6-mp3-128.scdn.arkena.com/virginradio.mp3
+ url:/soir/url
  msi:/soir/msi

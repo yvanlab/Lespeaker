@@ -1,5 +1,13 @@
 #include "fileManager.h"
 
+#if defined(ARDUINO) && ARDUINO >= 100
+#include "Arduino.h"
+#else
+#include "WProgram.h"
+#endif
+
+
+
 String FileManager::readCfgType(File *file, const char *type) {
 	while (file->available() != 0) {
 		//A inconsistent line length may lead to heap memory fragmentation
@@ -18,9 +26,9 @@ String FileManager::readCfgType(File *file, const char *type) {
 
 String FileManager::readCfg(const char*period, const char *type) {
 
-	File file = SD.open("/cfg.txt", FILE_READ);
+	File file = SD.open("/cfg.txt", FILE_READ); // @suppress("Abstract class cannot be instantiated")
 	if (!file) {
-		DEBUGLOG("open failed");
+		DEBUGLOG("CDFG failed");
 		return "";
 	}
 
@@ -38,15 +46,15 @@ String FileManager::readCfg(const char*period, const char *type) {
 	}
 
 	file.close();
-	m_currentFoler = res;
-	DEBUGLOGF("Current folder [%s] \n",m_currentFoler.c_str());
+	//m_currentFoler = res;
+	DEBUGLOGF("CFG[%s] \n",res.c_str());
 	return res;
 }
 
 void FileManager::printDirectory(File dir, int numTabs) {
 	while (true) {
 
-		File entry = dir.openNextFile();
+		File entry = dir.openNextFile(); // @suppress("Abstract class cannot be instantiated")
 		if (!entry) {
 			// no more files
 			//Serial.println("fin");
@@ -75,44 +83,39 @@ String FileManager::getPreviousFile() {
 	else
 		index = 0;
 
-	String previousFile = getNextFile( index).c_str();
+	String previousFile = getFileIndex( index).c_str();
 	return /*m_currentFoler + */previousFile;
 
 }
 
 String FileManager::getNextFile() {
+	return  getFileIndex( m_currentIndex + 1).c_str();
+}
 
-	String nextFile =
-			getNextFile( m_currentIndex + 1).c_str();
-	return /*m_currentFoler + */nextFile;
+String FileManager::getFile() {
+	return getFileIndex( m_currentIndex).c_str();
 
 }
 
-bool FileManager::loadMusicIndex() {
-	File f = SD.open(m_currentFoler+"/musicIndex.txt");
+bool FileManager::loadMusicIndex(String folder) {
+	File f = SD.open(folder+"/musicIndex.txt");
 	if (!f) {
-		DEBUGLOGF("Folder [%s] not found\n",m_currentFoler+"/musicIndex.txt");
+		DEBUGLOGF("LMI[%s][%s] failed\n",folder.c_str(),"musicIndex.txt");
 		m_currentIndex = 0;
 		return false;
 	}
 	String l_line= f.readStringUntil('\n');
-	/*Serial.print("Read from file: ");
-    while(f.available()){
-    	char c = f.read();
-    	Serial.print(c );
-    	l_line += c;
-    }*/
-	DEBUGLOGF("Line read [%s]\n",l_line.c_str());
+	DEBUGLOGF("LMI[%s]\n",l_line.c_str());
 	m_currentIndex = l_line.toInt();
 	f.close();
-	DEBUGLOGF("Index read [%d]\n",m_currentIndex);
+	DEBUGLOGF("LMI[%d]\n",m_currentIndex);
 	return true;
 }
 
-bool FileManager::writeMusicIndex(){
-	File f = SD.open(m_currentFoler+"/musicIndex.txt",FILE_WRITE);
+bool FileManager::writeMusicIndex(String folder){
+	File f = SD.open(folder+"/musicIndex.txt",FILE_WRITE);
 	if (!f) {
-		DEBUGLOGF("Folder [%s] not found\n",m_currentFoler+"/musicIndex.txt");
+		DEBUGLOGF("WMI[%s][%s] not found\n",m_currentFoler.c_str(),"/musicIndex.txt");
 		return false;
 	}
 	String strToWrite = String(m_currentIndex);// + "\n";
@@ -123,56 +126,106 @@ bool FileManager::writeMusicIndex(){
 
 }
 
-bool FileManager::setCurrentFolder(String currentFolder) {
-	m_currentFoler = currentFolder;
+bool FileManager::loadPlayList(FileManager::PERIOD_TYPE period, FileManager::CONFIG_TYPE type){
+
+
+	if (m_currentPeriod == period && m_currentType == type) {
+		DEBUGLOGF("Not need to reload\n");
+		return true;
+	}
+
+	DEBUGLOGF("TYPE \n");
+	DEBUGLOGF("LPL [%s] [%s]\n",type_name[type],preriod_name[period]);
+	String folder = readCfg(preriod_name[period], type_name[type]);
+	bool res;
+	if (type == FileManager::CONFIG_RADIO) {
+		DEBUGLOGF("LPLr [%s] [%s]\n",folder.c_str(),"radio.txt");
+		res = loadFromFile(folder+String("/radio.txt"));
+	}else{
+		DEBUGLOGF("LPLf [%s]\n",folder.c_str());
+		res = loadFromFolder(folder);
+	}
+	if (res) {
+		loadMusicIndex(folder);
+		m_currentFoler = folder;
+		m_currentType = type;
+		m_currentPeriod = period;
+	}
+	return res;
+}
+
+bool FileManager::loadFromFile(String folderFile) {
+	File file = SD.open(folderFile);
+	if (!file) {
+		DEBUGLOGF("LFFi [%s] failed\n",folderFile.c_str());
+		return false;
+	}
+	m_fileRepo.clean();
+	while (file.available() != 0) {
+		String l_line = file.readStringUntil('\n');
+		l_line.replace("\n","");
+		l_line.replace("\r","");
+		m_fileRepo.add(l_line);
+		DEBUGLOGF("LFFi > %s\n",l_line.c_str());
+	}
+
+	file.close();
+	return true;
+
+}
+
+bool FileManager::loadFromFolder(String folder) {
+	//m_currentFoler = currentFolder;
 	//load all folder in memory
-	File f = SD.open(currentFolder);
+	File f = SD.open(folder);
 	if (!f) {
-		DEBUGLOGF("Folder [%s] not found\n",currentFolder);
+		DEBUGLOGF("LFF[%s] failed\n",folder);
 		return false;
 	}
 	f.rewindDirectory();
-	uint8_t currentIndex = 0;
+	//uint8_t currentIndex = 0;
 	File entry;
 	String fileName;
 
 	//clean array
-	for (uint8_t i = 0; i < m_indexArray; i++)
-		free(m_filesNameArray[i]);
-	m_indexArray = 0;
+	m_fileRepo.clean();
 
-	while (entry = f.openNextFile()) {
+	while ((entry = f.openNextFile()) == true) {
 		fileName = entry.name();
 		entry.close();
-		DEBUGLOG(fileName);
 		//is it an MP3 ?
-		if (fileName.indexOf(".mp3")) {
-			char * buf = (char *) malloc(fileName.length() + 1);
-			fileName.toCharArray(buf, fileName.length() + 1);
-			m_filesNameArray[m_indexArray] = buf;
-			m_indexArray++;
-		}
-
-		currentIndex++;
+		DEBUGLOGF("LFF[%s]",fileName.c_str());
+		if (fileName.indexOf(".mp3")>0 || fileName.indexOf(".MP3")>0) {
+			m_fileRepo.add(fileName);
+			DEBUGLOG(":added");
+		}else
+			DEBUGLOG("");
+		//currentIndex++;
 	}
-	loadMusicIndex();
+	return true;
+
 }
 
-String FileManager::getNextFile(uint8_t nextFileIndex) {
-	if (m_indexArray == 0)
+String FileManager::getFileIndex(uint8_t nextFileIndex) {
+	/*if (m_indexArray == 0)
+		return "";*/
+	if (m_fileRepo.isEmpty())
 		return "";
 
 	uint8_t fileIndex = nextFileIndex;
-	if (nextFileIndex >= m_indexArray) {
+	DEBUGLOGF("GNF:i[%d] s[%d]\n",fileIndex,m_fileRepo.size());
+	if (nextFileIndex >= m_fileRepo.size()) {
 		fileIndex = 0;
-		DEBUGLOGF("Go back to first\n");
+		DEBUGLOGF("GNF:First\n");
 	}
 	m_currentIndex = fileIndex;
-	DEBUGLOGF("Next indes[%d]\n",m_currentIndex);
-	writeMusicIndex();
-	return m_filesNameArray[fileIndex];
+	DEBUGLOGF("GNF[%d][%s]\n",m_currentIndex,m_fileRepo.get(fileIndex));
+	writeMusicIndex(m_currentFoler);
+	return m_fileRepo.get(fileIndex);
 
 }
+
+
 
 void FileManager::begin() {
 	DEBUGLOG("SD initiatization start");
@@ -193,7 +246,7 @@ void FileManager::begin() {
 	root.close();
 #endif
 
-	DEBUGLOGF("  res matin/url [%s]\n",readCfg("matin", "url").c_str()); DEBUGLOGF("  res matin/ane [%s]\n",readCfg("matin", "ane").c_str()); DEBUGLOGF("  res matin/msc [%s]\n",readCfg("matin", "msi").c_str()); DEBUGLOGF("  res soir/url  [%s]\n",readCfg("soir", "url").c_str());
+	//DEBUGLOGF("  res matin/url [%s]\n",readCfg("matin", "url").c_str()); DEBUGLOGF("  res matin/ane [%s]\n",readCfg("matin", "ane").c_str()); DEBUGLOGF("  res matin/msc [%s]\n",readCfg("matin", "msi").c_str()); DEBUGLOGF("  res soir/url  [%s]\n",readCfg("soir", "url").c_str());
 
 	/*String floder = "/soir/msi";	//readCfg("matin", "ane");
 	setCurrentFolder(floder);

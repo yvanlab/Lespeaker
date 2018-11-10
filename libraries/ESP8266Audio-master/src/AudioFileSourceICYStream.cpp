@@ -44,8 +44,15 @@ bool AudioFileSourceICYStream::open(const char *url)
   http.setReuse(true);
   int code = http.GET();
   if (code != HTTP_CODE_OK) {
-    http.end();
+	  if (http.hasHeader("Location")) {
+		  String header = http.header("Location");
+		  Serial.printf("Header [%s]\n",header.c_str());
+	  }
+	  http.end();
     cb.st(STATUS_HTTPFAIL, PSTR("Can't open HTTP request"));
+    Serial.printf("Open URL failed [%d]\n",code);
+
+
     return false;
   }
   if (http.hasHeader(hdr[0])) {

@@ -1,15 +1,22 @@
 #include "main.h"
+//#include "SPIFFS.h"*
+#include "myAudioOutputI2S.h"
 
-//SdFat sd;
-
-SettingManager *settingMger;//(pinLed);
-WifiManager *wifiMger;//(pinLed, &smManager);
-ActionManager *actionMger;//(pinLed)
-//FlashLed flLed(pinLed);
-FileManager *fileMger;//(pinLed);*/
+#include "fileExplorerUI.h"
 
 
-//LedManager          ldManager(pinLed,BLOCKED_MODE);
+
+SettingManager *settingMger; //(pinLed);
+WifiManager *wifiMger; //(pinLed, &smManager);
+ActionManager *actionMger; //(pinLed)
+
+AudioManager *audioMger;
+
+FlashLed *flLedControl;
+FlashLed *flLedSystem;
+
+FileManager *fileMger; //(pinLed);*/
+FileExplorerUI *fileExplorer;
 
 #ifdef MCPOC_TELNET
 RemoteDebug Debug;
@@ -32,102 +39,88 @@ void processCmdRemoteDebug() {
 }
 #endif
 
-/*AudioGeneratorMP3 *mp3;*/
-//AudioFileSourceSD *file;
-/*AudioOutputI2SNoDAC *out;
- AudioFileSourceID3 *id3;*/
-AudioGeneratorMP3 *mp3 = NULL;
-/*AudioFileSourceICYStream *file;
- AudioFileSourceSD *file;*/
-AudioFileSource *file = NULL;
-//AudioFileSourceBuffer *buff;
-//AudioOutputI2SNoDAC *out = NULL;
-AudioOutputI2S *out = NULL;
-uint8_t *space = NULL;
+/*#define SOUND_INPUT_TYPE_SD 0
+ #define SOUND_INPUT_TYPE_URL 1*/
 
-
-#define SOUND_INPUT_TYPE_SD 0
-#define SOUND_INPUT_TYPE_URL 1
+ActionManager::SPEAKER_MODE previousMode;
 
 /*
- * 	GPIO2/TX1  D4 - LRCK
- GPIO3/RX0 RX  - DATA
- GPIO15     D8 - BCLK
- *
+ bool handleFileRead() { // send the right file to the client (if it exists)
+ Serial.println("handleFileRead: ");
+ String path = "/lespeaker.html";
+ //if (path.endsWith("/")) path += "index.html";         // If a folder is requested, send the index file
+ String contentType = "text/html";            // Get the MIME type
+ if (SPIFFS.exists(path)) {                            // If the file exists
+ File file = SPIFFS.open(path, "r");                 // Open it
+ size_t sent = wifiMger->getServer()->streamFile(file, contentType); // And send it to the client
+ file.close();                                       // Then close the file again
+ return true;
+ }
+ Serial.println("\tFile Not Found");
+ return false;                                         // If the file doesn't exist, return false
+ }
  */
-//uint8_t  space[30000];
-void startNewSound(String link, uint8_t InputType) {
-	DEBUGLOGF("Before stop...Free mem=%d\n", ESP.getFreeHeap());
-	if(mp3!=NULL && mp3->isRunning() ) {
-		mp3->stop();
-		delay(250);
-	}
-
-	if (file != NULL)
-		delete file;
-	if (InputType == SOUND_INPUT_TYPE_SD) {
-		file = new AudioFileSourceSD(link.c_str());
-	} else if (InputType == SOUND_INPUT_TYPE_URL) {
-		file = new AudioFileSourceICYStream(link.c_str());
-	}
-	/*if (space == NULL)
-		space = (uint8_t *) malloc(29200);*/
-	//delay(500);
-	//out = new AudioOutputI2SNoDAC();
-	if (out == NULL) out = new AudioOutputI2S();//AudioOutputI2S();
-	out->SetGain(((float)settingMger->gain*4.0)/100);
-	//out->SetGain(1.0);
-	//AudioGeneratorMP3(void *space, int size)
-	if (mp3 == NULL) mp3 = new AudioGeneratorMP3(/*space, 29200*/);
-	//mp3 = new AudioGeneratorMP3();//preallocateSpace,1500);
-	boolean res = mp3->begin(file, out);
-	DEBUGLOGF("after stop...Free mem=%d\n", ESP.getFreeHeap());
-	DEBUGLOGF("Start playing [%s],%d,%d\n",link.c_str(),InputType, res);
-	/*  const char *URL="http://streaming.shoutcast.com/80sPlanet?lang=en-US";
-	 file = new AudioFileSourceICYStream(URL);
-	 file->RegisterMetadataCB(MDCallback, (void*)"ICY");
-	 out = new AudioOutputI2SNoDAC();
-	 mp3 = new AudioGeneratorMP3();
-	 mp3->RegisterStatusCB(StatusCallback, (void*)"mp3");
-	 mp3->begin(file, out);*/
-//delay(1000);
-}
-
 void startWiFiserver() {
 	if (wifiMger->begin(IPAddress(MODULE_IP), MODULE_NAME, MODULE_MDNS,
-			MODULE_MDNS_AP) == WL_CONNECTED) {
-		wifiMger->getServer()->on("/", dataPage);
+	MODULE_MDNS_AP) == WL_CONNECTED) {
+		//wifiMger->getServer()->on("/", dataPage);
 		wifiMger->getServer()->onNotFound(dataPage);
 	}
 	wifiMger->getServer()->on("/status", dataJson);
 	wifiMger->getServer()->on("/setting", dataPage);
+
+	wifiMger->getServer()->on("/sd",       std::bind(&FileExplorerUI::HomePage, fileExplorer ));
+/*	wifiMger->getServer()->on("/download", File_Download);
+	wifiMger->getServer()->on("/upload",   File_Upload);*/
+	wifiMger->getServer()->on("/upload",  HTTP_POST,[](){ wifiMger->getServer()->send(200);}, std::bind(&FileExplorerUI::handleFileUpload, fileExplorer ));
+	//wifiMger->getServer()->on("/stream",   File_Stream);
+	wifiMger->getServer()->on("/del",      std::bind(&FileExplorerUI::File_Delete, fileExplorer ));
+	wifiMger->getServer()->on("/dir",      std::bind(&FileExplorerUI::SD_dir, fileExplorer ));
+
 	wifiMger->getServer()->on("/setData", setData);
 	Serial.println("startWiFiserver end");
 	Serial.println(wifiMger->toString(STD_TEXT));
 }
 
-
 void setup(void) {
-	//delay(5000);
-	//node.setcpufreq(node.CPU160MHZ)
-	Serial.begin(115200);//, SERIAL_8N1, 16, 17);
-	//Serial.begin(115200);
-	delay(500);
-	Serial.println("start debuging");
-	DEBUGLOGF("Frq : %d \n", ESP.getCpuFreqMHz());
-	//system_update_cpu_freq(SYS_CPU_160MHZ);
-	DEBUGLOGF("Free memory : %d \n", ESP.getFreeHeap());
-	DEBUGLOGF("SDK Version : %d \n", ESP.getSdkVersion());
+	Serial.begin(115200);
+	DEBUGLOGF("Frq : %d \n", ESP.getCpuFreqMHz()); DEBUGLOGF("Free memory : %d \n", ESP.getFreeHeap()); DEBUGLOGF("SDK Version : %d \n", ESP.getSdkVersion());
 
-	settingMger = new SettingManager (pinLed);
-	wifiMger = new WifiManager(pinLed, settingMger);
-	fileMger = new FileManager(pinLed);
-	actionMger = new ActionManager(pinLed);
+	pinMode(LED_RED_PIN, OUTPUT);
+	pinMode(LED_GREEN_PIN, OUTPUT);
+	pinMode(LED_BLUE_PIN, OUTPUT);
+	digitalWrite(LED_RED_PIN, LOW);
+	digitalWrite(LED_GREEN_PIN, LOW);
+	digitalWrite(LED_BLUE_PIN, LOW);
+
+	flLedSystem = new FlashLed(0);
+	flLedSystem->startLed(LED_RED_PIN, 5);
+	flLedControl = new FlashLed(1);
+	DEBUGLOGF("flLedControl \n");
+
+	settingMger = new SettingManager(pinLed);
+	wifiMger 	= new WifiManager(pinLed, settingMger);
+	fileMger 	= new FileManager(pinLed);
+	fileExplorer= new FileExplorerUI(pinLed,wifiMger->getServer());
+
+	audioMger	= new AudioManager(pinLed);
+
+
+	/*if (!SPIFFS.begin(true)) {
+		Serial.println("An Error has occurred while mounting SPIFFS");
+		return;
+	}*/
 
 	//delay(5000);
 	settingMger->readData();
 	DEBUGLOG("");DEBUGLOG(settingMger->toString(STD_TEXT));
+	actionMger = new ActionManager(pinLed,
+			(ActionManager::SPEAKER_MODE) settingMger->mode,
+			(ActionManager::SPEAKER_SOURCE) settingMger->source);
+	audioMger->setVolume(settingMger->volume);
+
 	startWiFiserver();
+
 
 #ifdef MCPOC_TELNET
 	Debug.begin(MODULE_NAME);
@@ -140,27 +133,37 @@ void setup(void) {
 	randomSeed(analogRead(0));
 #endif
 
-	/*mtTimer.onTimerAction(std::bind(&FlashLed::flashCallback,&flLed));
-	 mtTimer.begin(timerFrequence);
-	 mtTimer.setCustomMS(3000); //10s*/
+	/*mtTimer.onTimerAction(std::bind(&FlashLed::flashCallback,&flLedControl));*/
+	mtTimer.begin();
+	mtTimer.setCustomMS(3000); //10s*/
 
 #ifdef MCPOC_TEST
 	Serial.println("Testing device connections...");
 #endif
-
+	flLedSystem->startFlashLed(200);
 	fileMger->begin();
-	//getNextFile("", "") ;
+	//m_InputType = settingMger->input;
 
-	pinMode(13, INPUT);
-	DEBUGLOGF("D3 : %d\n",digitalRead(13));
+	audioMger->startNewSound("/init.mp3", ActionManager::SOURCE_MICROSD);
+	/*if (settingMger->source == ActionManager::SOURCE_MICROSD) {
+		fileMger->loadPlayList(FileManager::PERIOD_SOIR,
+				FileManager::CONFIG_MSI);
+	} else {
+		fileMger->loadPlayList(FileManager::PERIOD_SOIR,
+				FileManager::CONFIG_RADIO);
+	}*/
+	flLedSystem->stopFlashLed();
+	flLedSystem->stopLed();
 
-	Serial.printf("Sample MP3 playback begins...\n");
+	//mtTimer.onTimerAction(std::bind(&AudioManager::handle, audioMger));
 
-	startNewSound("/init.mp3", SOUND_INPUT_TYPE_SD);
-
-	String folder = fileMger->readCfg("soir", "msi");
-	fileMger->setCurrentFolder(folder);
-
+	if (actionMger->getMode() == ActionManager::MODE_VOLUME) {
+		flLedControl->startLed(LED_GREEN_PIN, 5);
+	} else {
+		flLedControl->startLed(LED_BLUE_PIN, 5);
+	}
+	actionMger->setActionForced(ActionManager::WAKE_UP);
+	//pinMode(21,INPUT_PULLUP);
 
 }
 
@@ -175,76 +178,120 @@ void setup(void) {
 
 
  */
+FileManager::PERIOD_TYPE getDayPeriod() {
+	if (wifiMger->getHourManager()->isNight()) {
+		DEBUGLOGF("FileManager::PERIOD_SOIR [%d] \n", FileManager::PERIOD_SOIR);
+		return FileManager::PERIOD_SOIR;
+	} else {
+		DEBUGLOGF("FileManager::PERIOD_MATIN [%d] \n", FileManager::PERIOD_MATIN);
+		return FileManager::PERIOD_MATIN;
+	}
+}
+
 uint_fast32_t lastms;
 bool _someOneHere = true;
+
+String st_prev;
 
 void loop(void) {
 
 	wifiMger->handleClient();
 	actionMger->handle(_someOneHere);
-	ActionManager::SPEAKER_ACTION action = actionMger->getAction();
-	//ACTION_NONE,VOLUME_UP,VOLUME_DOWN,SELECTION_NEXT,SELECTION_PREVIOUS,SWITH_OFF};
-	switch(action) {
-		case ActionManager::ACTION_NONE:
-			break;
-		case ActionManager::VOLUME_UP:
-			DEBUGLOGF("Volume up [%d]\n",settingMger->gain);
-			if (settingMger->gain<100) {
-				settingMger->gain++;
-				// 100 --->4.0
-				//  50 ---> X
-				out->SetGain(((float)settingMger->gain*4.0)/100.0);
-			}
-			break;
-		case ActionManager::VOLUME_DOWN:
-			DEBUGLOGF("Volume down [%d]\n",settingMger->gain);
-			if (settingMger->gain>0) {
-				settingMger->gain--;
-				out->SetGain(((float)settingMger->gain*4.0)/100.0);
-			}
-			break;
-		case ActionManager::SELECTION_NEXT:
-			startNewSound(fileMger->getNextFile(), SOUND_INPUT_TYPE_SD);
-			DEBUGLOGF("Selection next\n");
-			break;
-		case ActionManager::SELECTION_PREVIOUS:
-			startNewSound(fileMger->getPreviousFile(), SOUND_INPUT_TYPE_SD);
-			DEBUGLOGF("Selection previous\n");
-			break;
-		case ActionManager::SWITH_OFF:
-			DEBUGLOGF("SWITH_OFF\n");
-			startNewSound("/close.mp3", SOUND_INPUT_TYPE_SD);
-			break;
-		case ActionManager::WAKE_UP:{
-			DEBUGLOGF("WAKE_UP\n");
-			String dayPeriod;
-			if (wifiMger->getHourManager()->isNight()) {dayPeriod = "soir";}
-			else {dayPeriod = "matin";}
-			String Mfolder = fileMger->readCfg(dayPeriod.c_str(), "ane");
-			fileMger->setCurrentFolder(Mfolder);
-			startNewSound(fileMger->getNextFile(), SOUND_INPUT_TYPE_SD);
-			Mfolder = fileMger->readCfg(dayPeriod.c_str(), "msi");
-			fileMger->setCurrentFolder(Mfolder);
-			break;
-		}
-		case ActionManager::SELECTION_CHAIN:
-			if (!mp3->isRunning()) {
-				DEBUGLOGF("SELECTION_CHAIN\n");
-				//startNewSound(fileMger->getNextFile(), SOUND_INPUT_TYPE_SD);
-				startNewSound("http://mp3lg3.tdf-cdn.com/9146/lag_103325.mp3", SOUND_INPUT_TYPE_URL);
-			}
-			break;
+	flLedControl->handle();
+	audioMger->handle();
 
-					
+	ActionManager::SPEAKER_ACTION action = actionMger->getAction();
+
+	String lAction = actionMger->toString(STD_TEXT);
+	if (st_prev != lAction) {
+		st_prev = lAction;
+		Serial.printf("READ for %d ms %s ...\n", lastms, lAction.c_str());
 	}
 
-	if (mp3->isRunning()) {
-		 if (!mp3->loop()) mp3->stop();
-	
+	if (actionMger->isModeChanged() || action == ActionManager::WAKE_UP) {
+		if (actionMger->getMode() == ActionManager::MODE_VOLUME) {
+			flLedControl->startLed(LED_GREEN_PIN, 5);
+		} else {
+			flLedControl->startLed(LED_BLUE_PIN, 5);
+		}
+	}
+
+	if (actionMger->isSourceChanged()) {
+		settingMger->source = actionMger->getSource();
+		DEBUGLOGF("Source changed [%d]\n",settingMger->source);
+		audioMger->stopSound();
+
+	}
+
+	//ACTION_NONE,VOLUME_UP,VOLUME_DOWN,SELECTION_NEXT,SELECTION_PREVIOUS,SWITH_OFF};
+	switch (action) {
+	case ActionManager::ACTION_NONE:
+		break;
+	case ActionManager::VOLUME_UP:
+		flLedControl->startFlashLed(100);
+		if (settingMger->volume < 100) {
+			settingMger->volume++;
+			audioMger->setVolume(settingMger->volume);
+		}
+		DEBUGLOGF("Volume up [%d]\n",settingMger->volume);
+		break;
+	case ActionManager::VOLUME_DOWN:
+		if (settingMger->volume > 0) {
+			settingMger->volume--;
+			audioMger->setVolume(settingMger->volume);
+			flLedControl->startFlashLed(100);
+		}
+		DEBUGLOGF("Volume down [%d]\n",settingMger->volume);
+		break;
+	case ActionManager::SELECTION_NEXT:
+		flLedControl->startFlashLed(100);
+		audioMger->startNewSound(fileMger->getNextFile(), settingMger->source);
+		DEBUGLOGF("Selection next\n");
+
+		break;
+	case ActionManager::SELECTION_PREVIOUS:
+		flLedControl->startFlashLed(100);
+		audioMger->startNewSound(fileMger->getPreviousFile(), settingMger->source);
+		DEBUGLOGF("Selection previous\n");
+		break;
+	case ActionManager::SWITH_OFF:
+		DEBUGLOGF("SWITH_OFF\n");
+		flLedControl->startLed(LED_RED_PIN, 64, 5000);
+		settingMger->mode = actionMger->getMode();
+		settingMger->writeData();
+		audioMger->startNewSound("/close.mp3", ActionManager::SOURCE_MICROSD);
+		break;
+	case ActionManager::WAKE_UP: {
+		flLedControl->startFlashLed(100);
+		DEBUGLOGF("WAKE_UP\n");
+		// load annonce
+		fileMger->loadPlayList(getDayPeriod(), FileManager::CONFIG_ANE);
+		audioMger->startNewSound(fileMger->getNextFile(), ActionManager::SOURCE_MICROSD);
+		//startNewSound(fileMger->getNextFile(), m_InputType);
+		break;
+	}
+	case ActionManager::SELECTION_CHAIN:
+		if (!audioMger->isRunning()) {
+			flLedControl->startFlashLed(100);
+			if (settingMger->source == ActionManager::SOURCE_MICROSD)
+				fileMger->loadPlayList(getDayPeriod(), FileManager::CONFIG_MSI);
+			else
+				fileMger->loadPlayList(getDayPeriod(),
+						FileManager::CONFIG_RADIO);
+
+			DEBUGLOGF("SELECTION_CHAIN\n");
+			audioMger->startNewSound(fileMger->getNextFile(), settingMger->source);
+			//startNewSound("http://mp3lg3.tdf-cdn.com/9146/lag_103325.mp3", SOUND_INPUT_TYPE_URL);
+		}
+		break;
+
+	}
+
+	if (audioMger->isRunning()) {
 		if (millis() - lastms > 1000) {
 			lastms = millis();
-			//Serial.printf("READ for %d ms %d ...\n", lastms, ESP.getFreeHeap());
-			//actionMger->toString(STD_TEXT);
+			//Serial.printf("READ for %d ms %s ...\n", lastms, actionMger->toString(STD_TEXT).c_str());
+			;
 
 		}
 	}
@@ -254,44 +301,60 @@ void loop(void) {
 
 	 if(Serial.available() > 0)
 	 {
-	   number_of_bytes_received = Serial.readBytesUntil (13,data,20); // read bytes (max. 20) from buffer, untill <CR> (13). store bytes in data. count the bytes recieved.
-	   data[number_of_bytes_received] = 0; // add a 0 terminator to the char array
-	   Serial.println(data);
+	 number_of_bytes_received = Serial.readBytesUntil (13,data,20); // read bytes (max. 20) from buffer, untill <CR> (13). store bytes in data. count the bytes recieved.
+	 data[number_of_bytes_received] = 0; // add a 0 terminator to the char array
+	 Serial.println(data);
 	 }
 
-	/*
-	while(Serial.available())
-	  Serial.read();
-*/
+	 /*
+	 while(Serial.available())
+	 Serial.read();
+	 */
 
 	char c = Serial.read();
-	if (c=='P'){
+	if (c == 'P') {
 		_someOneHere = true;
 		Serial.println(c);
 	}
 
-	if (c=='N'){
+	if (c == 'N') {
 		_someOneHere = false;
 		Serial.println(c);
 	}
+
+	if (c == 'R') {
+		settingMger->source = ActionManager::SOURCE_RADIO;
+		Serial.println(c);
+	}
+	if (c == 'S') {
+		settingMger->source = ActionManager::SOURCE_MICROSD;
+		Serial.println(c);
+	}
+	/*if (c=='M'){
+	 pinMode(17,OUTPUT);
+	 digitalWrite(17, LOW);
+	 Serial.println(c);
+	 }
+	 if (c=='Z'){
+	 pinMode(17,OUTPUT);
+	 digitalWrite(17, HIGH);
+	 Serial.println(c);
+	 }*/
+
+	//DEBUGLOGF("capteur %d\n",digitalRead(21));
 	//if (c != 0) Serial.print(c);
+	if (mtTimer.is1SPeriod()) {
+		//DEBUGLOG("is1SPeriod ");
+		//digitalWrite(BUILTIN_LED, mtTimer.is1SFrequence());
+		//DEBUGLOGF("is wifi connected %d %d\l",millis(),WiFi.isConnected());
 
-	/*if (mtTimer.is1SPeriod()) {
-		DEBUGLOG("is1SPeriod ");
-		if (!digitalRead(D3)) {
-		 //mp3->stop();
-		 //startNewSound(readCfg("matin", "url"), SOUND_INPUT_TYPE_URL);
+	}
 
-
-		 }
-	}*/
-
-	/*if (mtTimer.is5MNPeriod()) {
-
+	if (mtTimer.is5MNPeriod()) {
 		if (!WiFi.isConnected()) {
 			ESP.restart();
 		}
-	}*/
+	}
 
-	//mtTimer.clearPeriod();
+	mtTimer.clearPeriod();
 }
