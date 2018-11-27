@@ -260,8 +260,8 @@ bool AudioGeneratorMP3::begin(AudioFileSource *source, AudioOutput *output)
     stream = reinterpret_cast<struct mad_stream *>(malloc(sizeof(struct mad_stream)));
     frame = reinterpret_cast<struct mad_frame *>(malloc(sizeof(struct mad_frame)));
     synth = reinterpret_cast<struct mad_synth *>(malloc(sizeof(struct mad_synth)));
-    Serial.printf("%d + %d + %d + %d = %d\n", buffLen,sizeof(struct mad_stream), sizeof(struct mad_frame),sizeof(struct mad_synth),
-    		buffLen+sizeof(struct mad_stream)+sizeof(struct mad_frame)+sizeof(struct mad_synth) );
+    /*Serial.printf("%d + %d + %d + %d = %d\n", buffLen,sizeof(struct mad_stream), sizeof(struct mad_frame),sizeof(struct mad_synth),
+    		buffLen+sizeof(struct mad_stream)+sizeof(struct mad_frame)+sizeof(struct mad_synth) );*/
     if (!buff || !stream || !frame || !synth) {
       free(buff);
       free(stream);

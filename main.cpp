@@ -6,16 +6,15 @@
 
 
 
-SettingManager *settingMger; //(pinLed);
-WifiManager *wifiMger; //(pinLed, &smManager);
-ActionManager *actionMger; //(pinLed)
-
+SettingManager *settingMger;
+WifiManager *wifiMger;
+ActionManager *actionMger;
 AudioManager *audioMger;
 
 FlashLed *flLedControl;
 FlashLed *flLedSystem;
 
-FileManager *fileMger; //(pinLed);*/
+FileManager *fileMger;
 FileExplorerUI *fileExplorer;
 
 #ifdef MCPOC_TELNET
@@ -39,27 +38,18 @@ void processCmdRemoteDebug() {
 }
 #endif
 
-/*#define SOUND_INPUT_TYPE_SD 0
- #define SOUND_INPUT_TYPE_URL 1*/
 
 ActionManager::SPEAKER_MODE previousMode;
 
-/*
- bool handleFileRead() { // send the right file to the client (if it exists)
- Serial.println("handleFileRead: ");
- String path = "/lespeaker.html";
- //if (path.endsWith("/")) path += "index.html";         // If a folder is requested, send the index file
- String contentType = "text/html";            // Get the MIME type
- if (SPIFFS.exists(path)) {                            // If the file exists
- File file = SPIFFS.open(path, "r");                 // Open it
- size_t sent = wifiMger->getServer()->streamFile(file, contentType); // And send it to the client
- file.close();                                       // Then close the file again
- return true;
- }
- Serial.println("\tFile Not Found");
- return false;                                         // If the file doesn't exist, return false
- }
- */
+
+void playSound() {
+	String filename = wifiMger->getServer()->arg("file");
+	if (filename.length()!=0) {
+		audioMger->startNewSound(filename, ActionManager::SOURCE_MICROSD,settingMger->volume);
+	}
+	wifiMger->getServer()->send ( 200, "text/html", "Ok man" );
+}
+
 void startWiFiserver() {
 	if (wifiMger->begin(IPAddress(MODULE_IP), MODULE_NAME, MODULE_MDNS,
 	MODULE_MDNS_AP) == WL_CONNECTED) {
@@ -76,6 +66,7 @@ void startWiFiserver() {
 	//wifiMger->getServer()->on("/stream",   File_Stream);
 	wifiMger->getServer()->on("/del",      std::bind(&FileExplorerUI::File_Delete, fileExplorer ));
 	wifiMger->getServer()->on("/dir",      std::bind(&FileExplorerUI::SD_dir, fileExplorer ));
+	wifiMger->getServer()->on("/play",     playSound);
 
 	wifiMger->getServer()->on("/setData", setData);
 	Serial.println("startWiFiserver end");
@@ -144,18 +135,11 @@ void setup(void) {
 	fileMger->begin();
 	//m_InputType = settingMger->input;
 
-	audioMger->startNewSound("/init.mp3", ActionManager::SOURCE_MICROSD);
-	/*if (settingMger->source == ActionManager::SOURCE_MICROSD) {
-		fileMger->loadPlayList(FileManager::PERIOD_SOIR,
-				FileManager::CONFIG_MSI);
-	} else {
-		fileMger->loadPlayList(FileManager::PERIOD_SOIR,
-				FileManager::CONFIG_RADIO);
-	}*/
+	audioMger->startNewSound("/init.mp3", ActionManager::SOURCE_MICROSD,settingMger->volume);
+
 	flLedSystem->stopFlashLed();
 	flLedSystem->stopLed();
 
-	//mtTimer.onTimerAction(std::bind(&AudioManager::handle, audioMger));
 
 	if (actionMger->getMode() == ActionManager::MODE_VOLUME) {
 		flLedControl->startLed(LED_GREEN_PIN, 5);
@@ -167,17 +151,7 @@ void setup(void) {
 
 }
 
-/*
- Matin         00:00 > 11:00
- Midi          11:00 > 13:00
- apres-midi    13:00 > 18:00
- Soir          18:00 > 23:59
 
- annonce
- Musique local/Internet
-
-
- */
 FileManager::PERIOD_TYPE getDayPeriod() {
 	if (wifiMger->getHourManager()->isNight()) {
 		DEBUGLOGF("FileManager::PERIOD_SOIR [%d] \n", FileManager::PERIOD_SOIR);
@@ -188,10 +162,12 @@ FileManager::PERIOD_TYPE getDayPeriod() {
 	}
 }
 
-uint_fast32_t lastms;
+//uint_fast32_t lastms;
 bool _someOneHere = true;
 
-String st_prev;
+//String st_prev;
+
+ActionManager::SPEAKER_ACTION previousAction = ActionManager::ACTION_NONE;
 
 void loop(void) {
 
@@ -202,11 +178,11 @@ void loop(void) {
 
 	ActionManager::SPEAKER_ACTION action = actionMger->getAction();
 
-	String lAction = actionMger->toString(STD_TEXT);
+	/*String lAction = actionMger->toString(STD_TEXT);
 	if (st_prev != lAction) {
 		st_prev = lAction;
-		Serial.printf("READ for %d ms %s ...\n", lastms, lAction.c_str());
-	}
+		DEBUGLOGF("READ for %d ms %s ...\n", lastms, lAction.c_str());
+	}*/
 
 	if (actionMger->isModeChanged() || action == ActionManager::WAKE_UP) {
 		if (actionMger->getMode() == ActionManager::MODE_VOLUME) {
@@ -219,6 +195,7 @@ void loop(void) {
 	if (actionMger->isSourceChanged()) {
 		settingMger->source = actionMger->getSource();
 		DEBUGLOGF("Source changed [%d]\n",settingMger->source);
+		previousAction = ActionManager::CHANGE_SOURCE;
 		audioMger->stopSound();
 
 	}
@@ -245,13 +222,13 @@ void loop(void) {
 		break;
 	case ActionManager::SELECTION_NEXT:
 		flLedControl->startFlashLed(100);
-		audioMger->startNewSound(fileMger->getNextFile(), settingMger->source);
+		audioMger->startNewSound(fileMger->getNextFile(), settingMger->source,settingMger->volume);
 		DEBUGLOGF("Selection next\n");
 
 		break;
 	case ActionManager::SELECTION_PREVIOUS:
 		flLedControl->startFlashLed(100);
-		audioMger->startNewSound(fileMger->getPreviousFile(), settingMger->source);
+		audioMger->startNewSound(fileMger->getPreviousFile(), settingMger->source,settingMger->volume);
 		DEBUGLOGF("Selection previous\n");
 		break;
 	case ActionManager::SWITH_OFF:
@@ -259,15 +236,15 @@ void loop(void) {
 		flLedControl->startLed(LED_RED_PIN, 64, 5000);
 		settingMger->mode = actionMger->getMode();
 		settingMger->writeData();
-		audioMger->startNewSound("/close.mp3", ActionManager::SOURCE_MICROSD);
+		audioMger->startNewSound("/close.mp3", ActionManager::SOURCE_MICROSD,settingMger->volume);
 		break;
 	case ActionManager::WAKE_UP: {
 		flLedControl->startFlashLed(100);
 		DEBUGLOGF("WAKE_UP\n");
 		// load annonce
 		fileMger->loadPlayList(getDayPeriod(), FileManager::CONFIG_ANE);
-		audioMger->startNewSound(fileMger->getNextFile(), ActionManager::SOURCE_MICROSD);
-		//startNewSound(fileMger->getNextFile(), m_InputType);
+		audioMger->startNewSound(fileMger->getNextFile(), ActionManager::SOURCE_MICROSD,settingMger->volume);
+		previousAction = ActionManager::WAKE_UP;
 		break;
 	}
 	case ActionManager::SELECTION_CHAIN:
@@ -280,37 +257,30 @@ void loop(void) {
 						FileManager::CONFIG_RADIO);
 
 			DEBUGLOGF("SELECTION_CHAIN\n");
-			audioMger->startNewSound(fileMger->getNextFile(), settingMger->source);
+			if (previousAction == ActionManager::WAKE_UP || previousAction == ActionManager::CHANGE_SOURCE) {
+				audioMger->startNewSound(fileMger->getFile(), settingMger->source,settingMger->volume);
+				previousAction = ActionManager::SELECTION_CHAIN;
+			}else{
+				audioMger->startNewSound(fileMger->getNextFile(), settingMger->source,settingMger->volume);
+			}
+
+
 			//startNewSound("http://mp3lg3.tdf-cdn.com/9146/lag_103325.mp3", SOUND_INPUT_TYPE_URL);
 		}
 		break;
 
 	}
 
-	if (audioMger->isRunning()) {
+/*	if (audioMger->isRunning()) {
 		if (millis() - lastms > 1000) {
 			lastms = millis();
-			//Serial.printf("READ for %d ms %s ...\n", lastms, actionMger->toString(STD_TEXT).c_str());
 			;
 
 		}
 	}
+*/
 
-	/*char data [21];
-	 int number_of_bytes_received;
-
-	 if(Serial.available() > 0)
-	 {
-	 number_of_bytes_received = Serial.readBytesUntil (13,data,20); // read bytes (max. 20) from buffer, untill <CR> (13). store bytes in data. count the bytes recieved.
-	 data[number_of_bytes_received] = 0; // add a 0 terminator to the char array
-	 Serial.println(data);
-	 }
-
-	 /*
-	 while(Serial.available())
-	 Serial.read();
-	 */
-
+/*
 	char c = Serial.read();
 	if (c == 'P') {
 		_someOneHere = true;
@@ -330,7 +300,7 @@ void loop(void) {
 		settingMger->source = ActionManager::SOURCE_MICROSD;
 		Serial.println(c);
 	}
-	/*if (c=='M'){
+	if (c=='M'){
 	 pinMode(17,OUTPUT);
 	 digitalWrite(17, LOW);
 	 Serial.println(c);
@@ -339,22 +309,18 @@ void loop(void) {
 	 pinMode(17,OUTPUT);
 	 digitalWrite(17, HIGH);
 	 Serial.println(c);
-	 }*/
+	 }
 
-	//DEBUGLOGF("capteur %d\n",digitalRead(21));
-	//if (c != 0) Serial.print(c);
-	if (mtTimer.is1SPeriod()) {
-		//DEBUGLOG("is1SPeriod ");
-		//digitalWrite(BUILTIN_LED, mtTimer.is1SFrequence());
-		//DEBUGLOGF("is wifi connected %d %d\l",millis(),WiFi.isConnected());
+	 */
 
-	}
 
 	if (mtTimer.is5MNPeriod()) {
-		if (!WiFi.isConnected()) {
+		if (!WiFi.isConnected() || wifiMger->getHourManager()->isNextDay()) {
 			ESP.restart();
 		}
 	}
+
+
 
 	mtTimer.clearPeriod();
 }

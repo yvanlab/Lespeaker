@@ -46,8 +46,11 @@ void AudioManager::handle() {
 void AudioManager::stopSound() {
 	//stopHandle = true;
 	if (mp3 != NULL && mp3->isRunning()) {
-		mp3->stop();
+		setVolume(0);
+		out->stop();
 		delay(250);
+		mp3->stop();
+
 	}
 }
 
@@ -55,7 +58,7 @@ void AudioManager::stopSound() {
  return (float)(settingMger->volume);
  }*/
 
-void AudioManager::startNewSound(String link, uint8_t InputType) {
+void AudioManager::startNewSound(String link, uint8_t InputType,int8_t volume ) {
 	DEBUGLOGF("Before stop...Free mem=%d\n", ESP.getFreeHeap());
 	stopSound();
 	boolean res = false;
@@ -67,23 +70,34 @@ void AudioManager::startNewSound(String link, uint8_t InputType) {
 		delete buff;
 		buff = NULL;
 	}
+
+	if (out!= NULL) {
+		delete out;
+		out = NULL;
+	}
+
+	if (mp3 != NULL) {
+		delete mp3;
+		mp3 = NULL;
+	}
+
+	if (out == NULL) {
+		out = new myAudioOutputI2S();//AudioOutputI2S();
+		out->SetOutputModeMono(true);
+	}
+
+	if (mp3 == NULL)
+		mp3 = new AudioGeneratorMP3(/*space, 29200*/);
+
 	if (InputType == ActionManager::SOURCE_MICROSD) {
 		file = new AudioFileSourceSD(link.c_str());
 		res = mp3->begin(file, out);
 	} else if (InputType == ActionManager::SOURCE_RADIO) {
 		 file = new AudioFileSourceHTTPStream(link.c_str());
-		 //((AudioFileSourceHTTPStream)(file))->SetReconnect(3,500);
-		 /*(AudioFileSourceICYStream)file->SetReconnect(3,500);
-		  file->RegisterMetadataCB(MDCallback, (void*)"ICY");*/
 		  buff = new AudioFileSourceBuffer(file, 4096);
-		  //buff->RegisterStatusCB(StatusCallback, (void*)"buffer");*/
-		/* file = new AudioFileSourceICYStream(link.c_str());
-		  buff = new AudioFileSourceBuffer(file, 8192);*/
-		  //mp3->RegisterStatusCB(StatusCallback, (void*)"mp3");
 		  res = mp3->begin(buff, out);
 	}
-	//boolean res = mp3->begin(file, out);
-	//out->SetGain(buildGain());
+	setVolume(volume);
 	DEBUGLOGF("after stop...Free mem=%d\n", ESP.getFreeHeap());
 	DEBUGLOGF("Start playing [%s],%d,%d\n",link.c_str(),InputType, res);
 	//stopHandle = false;

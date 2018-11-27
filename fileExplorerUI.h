@@ -28,10 +28,6 @@ public:
 		_server = server;
 	};
 
-	void append_page_header();
-	void append_page_footer();
-
-	void File_Download();
 	void File_Upload();
 	void handleFileUpload();
 	void HomePage();
@@ -42,19 +38,14 @@ public:
 	void SD_file_stream(String filename);
 	void File_Delete();
 	void SD_file_delete(String filename);
-	void SendHTML_Header();
-	void SendHTML_Content();
-	void SendHTML_Stop();
-	void SelectInput(String heading1, String command, String arg_calling_name);
-	void ReportSDNotPresent();
-	void ReportFileNotPresent(String target);
-	void ReportCouldNotCreateFile(String target);
+
 	String file_size(int bytes);
 
 
 	String webpage;
 	boolean SD_present = true;
 
+	String 			_currentDirectory;
 
 	WebServer        *_server;
 };

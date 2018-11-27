@@ -28,18 +28,18 @@ class AudioManager : public BaseManager
 {
   public:
 	AudioManager(uint8_t pinLed) : BaseManager (pinLed){
-		if (out == NULL) {
+		/*if (out == NULL) {
 			out = new myAudioOutputI2S();//AudioOutputI2S();
 			out->SetOutputModeMono(true);
-		}
+		}*/
 
-		if (mp3 == NULL) mp3 = new AudioGeneratorMP3(/*space, 29200*/);
+		//if (mp3 == NULL) mp3 = new AudioGeneratorMP3(/*space, 29200*/);
      } ;
     //~DurationManager();
 
 	void stopSound();
 
-	void startNewSound(String link, uint8_t InputType);
+	void startNewSound(String link, uint8_t InputType, int8_t volume);
 
 	void setVolume(int8_t volume) {
 		if (out) out->SetGain(volume) ;
@@ -47,7 +47,9 @@ class AudioManager : public BaseManager
 	void handle();
 
 	boolean isRunning() {
-		return mp3->isRunning();
+		if (mp3!=NULL)
+			return mp3->isRunning();
+		return false;
 	}
 
   protected:
