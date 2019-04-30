@@ -1,8 +1,13 @@
 matin
  ane:/matin/ane
  url:/matin/url
+ msi:/soir/msi
+entre
+ ane:/soir/ane
+ url:/soir/url
  msi:/matin/msi
 soir
  ane:/soir/ane
  url:/soir/url
  msi:/soir/msi
+ 

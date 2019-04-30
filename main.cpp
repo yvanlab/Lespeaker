@@ -42,6 +42,48 @@ void processCmdRemoteDebug() {
 ActionManager::SPEAKER_MODE previousMode;
 
 
+void viewFile() {
+	String filename = wifiMger->getServer()->arg("file");
+	if (filename.length()!=0) {
+		if (filename.indexOf(".mp3")>0 || filename.indexOf(".MP3")>0) {
+			audioMger->startNewSound(filename, ActionManager::SOURCE_MICROSD,settingMger->volume);
+		} else {
+
+			File f = SD.open(filename);
+			if (!f) {
+				DEBUGLOGF("viewFile No TXT [%s]\n",filename.c_str());
+			} else {
+				DEBUGLOGF("viewFile TXT [%s][%d]\n",filename.c_str(), f.size());
+				unsigned char _buffer[250];
+				wifiMger->getServer()->sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+				wifiMger->getServer()->sendHeader("Pragma", "no-cache");
+				wifiMger->getServer()->sendHeader("Expires", "-1");
+				wifiMger->getServer()->setContentLength(CONTENT_LENGTH_UNKNOWN); // *** BEGIN ***
+				wifiMger->getServer()->send(200, "text/html", "");
+				wifiMger->getServer()->sendContent("<html><body>");
+				//wifiMger->getServer()->sendHeader("Content-Length", String(f.size()) );
+				//wifiMger->getServer()->send(200, "text/html", "");
+				 while (f.available()) {
+					 int s = f.read(_buffer, 250);
+					 if (s>0) {
+						 //String sTmp(_buffer);
+						 //sTmp = _buffer;
+						 wifiMger->getServer()->sendContent("Fuck"); //send the current buffer
+					 	 DEBUGLOGF("%s",_buffer);
+					 }
+				 }
+				 wifiMger->getServer()->sendContent("</body></html>");
+				 wifiMger->getServer()->sendContent(""); // *** END 1/2 ***
+				 wifiMger->getServer()->client().stop();
+				 f.close();
+			}
+
+		}
+	}
+	wifiMger->getServer()->send ( 200, "text/html", "KO man" );
+}
+
+
 void playSound() {
 	String filename = wifiMger->getServer()->arg("file");
 	if (filename.length()!=0) {
@@ -62,11 +104,11 @@ void startWiFiserver() {
 	wifiMger->getServer()->on("/sd",       std::bind(&FileExplorerUI::HomePage, fileExplorer ));
 /*	wifiMger->getServer()->on("/download", File_Download);
 	wifiMger->getServer()->on("/upload",   File_Upload);*/
-	wifiMger->getServer()->on("/upload",  HTTP_POST,[](){ wifiMger->getServer()->send(200);}, std::bind(&FileExplorerUI::handleFileUpload, fileExplorer ));
+	wifiMger->getServer()->on("/upload",  HTTP_POST,[](){ wifiMger->getServer()->send(200);flLedSystem->stopLed();}, std::bind(&FileExplorerUI::handleFileUpload, fileExplorer ));
 	//wifiMger->getServer()->on("/stream",   File_Stream);
 	wifiMger->getServer()->on("/del",      std::bind(&FileExplorerUI::File_Delete, fileExplorer ));
 	wifiMger->getServer()->on("/dir",      std::bind(&FileExplorerUI::SD_dir, fileExplorer ));
-	wifiMger->getServer()->on("/play",     playSound);
+	wifiMger->getServer()->on("/play",     viewFile);
 
 	wifiMger->getServer()->on("/setData", setData);
 	Serial.println("startWiFiserver end");
@@ -156,9 +198,13 @@ FileManager::PERIOD_TYPE getDayPeriod() {
 	if (wifiMger->getHourManager()->isNight()) {
 		DEBUGLOGF("FileManager::PERIOD_SOIR [%d] \n", FileManager::PERIOD_SOIR);
 		return FileManager::PERIOD_SOIR;
-	} else {
+	} else if (wifiMger->getHourManager()->isMorning()) {
 		DEBUGLOGF("FileManager::PERIOD_MATIN [%d] \n", FileManager::PERIOD_MATIN);
 		return FileManager::PERIOD_MATIN;
+	} else {
+		DEBUGLOGF("FileManager::PERIOD_ENTRE [%d] \n", FileManager::PERIOD_ENTRE);
+		return FileManager::PERIOD_ENTRE;
+	
 	}
 }
 

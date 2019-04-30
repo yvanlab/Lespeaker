@@ -179,7 +179,7 @@ bool FileManager::loadFromFolder(String folder) {
 	//load all folder in memory
 	File f = SD.open(folder);
 	if (!f) {
-		DEBUGLOGF("LFF[%s] failed\n",folder);
+		DEBUGLOGF("LFF[%s] failed\n",folder.c_str());
 		return false;
 	}
 	f.rewindDirectory();

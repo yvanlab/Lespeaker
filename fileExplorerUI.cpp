@@ -53,22 +53,22 @@ void FileExplorerUI::HomePage(){
 File UploadFile;
 void FileExplorerUI::handleFileUpload(){ // upload a new file to the Filing system
   flLedSystem->startLed( LED_RED_PIN, 2);
-  Serial.println("File upload stage-3");
+  //Serial.println("File upload stage-3");
   HTTPUpload& uploadfile = _server->upload(); // See https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer/srcv
                                            // For further information on 'status' structure, there are other reasons such as a failed transfer that could be used
 
   if(uploadfile.status == UPLOAD_FILE_START)
   {
-    Serial.println("File upload stage-4");
+    //Serial.println("File upload stage-4");
     DEBUGLOGF("Uri : [%s]\n",_server->uri().c_str());
 
-    for (int i = 0; i<_server->args();i++){
+    /*for (int i = 0; i<_server->args();i++){
     	DEBUGLOGF("Arg : [%s][%s]\n",_server->argName(i).c_str(),_server->arg(i).c_str()) ;
-    }
+    }*/
 
     String rep = _currentDirectory;
      String filename;
-     DEBUGLOGF("Directpry : [%s]\n",rep.c_str());
+     DEBUGLOGF("Directory : [%s]\n",rep.c_str());
       if (!rep.endsWith("/")) {
     	  filename = rep + "/" + uploadfile.filename;
       } else {
@@ -83,7 +83,7 @@ void FileExplorerUI::handleFileUpload(){ // upload a new file to the Filing syst
   }
   else if (uploadfile.status == UPLOAD_FILE_WRITE)
   {
-    Serial.println("File upload stage-5");
+    //Serial.println("File upload stage-5");
     if(UploadFile) UploadFile.write(uploadfile.buf, uploadfile.currentSize); // Write the received bytes to the file
   }
   else if (uploadfile.status == UPLOAD_FILE_END)
@@ -91,7 +91,7 @@ void FileExplorerUI::handleFileUpload(){ // upload a new file to the Filing syst
     if(UploadFile)          // If the file was successfully created
     {
       UploadFile.close();   // Close the file again
-      Serial.print("Upload Size: "); Serial.println(uploadfile.totalSize);
+      DEBUGLOGF("Upload Size: %d\n", uploadfile.totalSize);
        _server->send(200,"text/html","");
     }
     /*else

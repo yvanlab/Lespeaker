@@ -76,7 +76,7 @@ public:
 	void setRedFlash(boolean activated) {
 		if (activated) {
 			flLedSystem->startLed( 12/*LED_RED_PIN*/, 2);
-			flLedSystem->startFlashLed(200);
+			flLedSystem->startFlashLed(10);
 		} else {
 			flLedSystem->stopLed();
 
